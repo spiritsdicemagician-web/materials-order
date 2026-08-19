@@ -1472,6 +1472,24 @@ const CATEGORIES = [
     {code:'M52806', name:'仮囲い塗装費', spec:'万能板W540×H2000', unit:'枚'},
     {code:'M52900', name:'シート特殊洗い', spec:'', unit:'枚'},
   ]},
+  { key: 'nocode', label: '6-品番無し資材', items: [
+    /* 品番が付いていない資材。カードと注文書には品番の代わりに「－」が出ます。
+       コードは並び順を管理するための内部用です（X001, X002 …）。 */
+    {code:'X001', name:'箒立て', spec:'', unit:'個', noCode:true},
+    {code:'X002', name:'スポコン', spec:'', unit:'個', noCode:true},
+    {code:'X003', name:'水切りワイパー', spec:'', unit:'本', noCode:true},
+    {code:'X004', name:'額縁養生スポンジ', spec:'', unit:'本', noCode:true},
+    {code:'X005', name:'デッキブラシ', spec:'', unit:'本', noCode:true},
+    {code:'X006', name:'コンクリ串', spec:'', unit:'枚', note:'プラスチック製のもあります', noCode:true},
+    {code:'X007', name:'トロ箱', spec:'', unit:'個', note:'大きさ様々なのがあります', noCode:true},
+    {code:'X008', name:'アッソー', spec:'', unit:'個', note:'大と小があります', noCode:true},
+    {code:'X009', name:'座敷箒', spec:'', unit:'本', noCode:true},
+    {code:'X010', name:'電柱用ポール', spec:'', unit:'本', noCode:true},
+    {code:'X011', name:'間柱', spec:'27*40*2700', unit:'本', note:'もうすぐなくなります', noCode:true},
+    {code:'X012', name:'450角LED照明', spec:'', unit:'個', noCode:true},
+    {code:'X013', name:'タイルカーペット', spec:'', unit:'枚', note:'すぐなくなるので在庫確認必須です', noCode:true},
+    {code:'X014', name:'ブラインド', spec:'', unit:'個', note:'いろんな寸法ありますので在庫確認必須です', noCode:true},
+  ]},
 ];
 
 let currentCategory = 'genba'; // デフォルトは2-現場備品関係
