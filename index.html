@@ -2304,12 +2304,14 @@ async function buildOrderZip(){
   return true;
 }
 
-function orderFilename(ext){
+// 出力ファイル名：日付_通し番号_(返)_現場名.拡張子
+// 「返」は返納書を含むとき（返納書のみ／注文書＋返納書）だけ付く。返納書のみは通し番号なし
+function orderFilename(ext, hasReturn, withNumber = true){
   const deliveryDate = deliveryDateEl.value ? new Date(deliveryDateEl.value + 'T00:00:00') : new Date();
   const dateStr = `${deliveryDate.getFullYear()}${String(deliveryDate.getMonth()+1).padStart(2,'0')}${String(deliveryDate.getDate()).padStart(2,'0')}`;
-  const textStr = sanitizeFilePart(projectNameEl.value.trim());
   const numStr = sanitizeFilePart(slipNoEl.value.trim() || '000');
-  return `${dateStr}_${textStr}_${numStr}.${ext}`;
+  const textStr = sanitizeFilePart(projectNameEl.value.trim());
+  return [dateStr, withNumber ? numStr : '', hasReturn ? '返' : '', textStr].filter(Boolean).join('_') + '.' + ext;
 }
 
 async function buildWorkbookAndDownload(){
@@ -2321,7 +2323,7 @@ async function buildWorkbookAndDownload(){
     const ok = await buildOrderZip();
     if(!ok) return;
     const zip = sessionOrderZip;
-    const filename = orderFilename('xlsm');
+    const filename = orderFilename('xlsm', false);
 
     const blob = await zip.generateAsync({
       type: 'blob',
@@ -2653,11 +2655,8 @@ async function buildReturnSlipAndDownload(){
       finalZip = retZip;
     }
 
-    const dateStr = `${deliveryDate.getFullYear()}${String(deliveryDate.getMonth()+1).padStart(2,'0')}${String(deliveryDate.getDate()).padStart(2,'0')}`;
-    const textStr = sanitizeFilePart(projectNameEl.value.trim());
-    const filename = combinedWithOrder
-      ? `${dateStr}_${textStr}_${sanitizeFilePart(slipNoEl.value.trim() || '000')}.xlsm`
-      : `${dateStr}_${textStr}_返納.xlsx`;
+    // 注文書＋返納書：日付_通し番号_返_現場名.xlsm ／ 返納書のみ：日付_返_現場名.xlsx
+    const filename = orderFilename(combinedWithOrder ? 'xlsm' : 'xlsx', true, combinedWithOrder);
 
     const blob = await finalZip.generateAsync({
       type: 'blob',
