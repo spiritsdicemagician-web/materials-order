@@ -1415,6 +1415,40 @@ function allItemsFlat(){
   return out;
 }
 
+/* ---- 写真の拡大表示 ---- */
+const lightboxEl = document.createElement('div');
+lightboxEl.className = 'lightbox';
+lightboxEl.innerHTML = `<div class="lightbox-inner"></div>`;
+document.body.appendChild(lightboxEl);
+lightboxEl.addEventListener('click', () => lightboxEl.classList.remove('show'));
+document.addEventListener('keydown', e => { if(e.key === 'Escape') lightboxEl.classList.remove('show'); });
+function openLightbox(item){
+  lightboxEl.querySelector('.lightbox-inner').innerHTML =
+    `<img src="${item.img}" alt=""><div class="lightbox-cap">${item.noCode ? '' : item.code + '　'}${item.name}${item.spec ? '　'+item.spec : ''}</div>`;
+  lightboxEl.classList.add('show');
+}
+function openColorChart(kind){
+  const ch = COLOR_CHARTS[kind];
+  lightboxEl.querySelector('.lightbox-inner').innerHTML =
+    `<div class="chart-wrap">${ch.imgs.map(src => `<img src="${src}" alt="">`).join('')}</div>`
+    + `<div class="lightbox-cap">${ch.title}</div>`;
+  lightboxEl.classList.add('show');
+}
+function chipSVG(tag, len){
+  const body = tag.k === 'board'
+    ? `<rect x="8" y="38" width="98" height="30" fill="#D7C4A3" stroke="#BFA87F" stroke-width="1"/>
+       <rect x="8" y="38" width="98" height="7" fill="#E3D3B8"/>
+       <rect x="102" y="34" width="42" height="38" rx="2" fill="${tag.c}" stroke="rgba(0,0,0,0.28)" stroke-width="1"/>`
+    : `<rect x="8" y="44" width="100" height="18" rx="3" fill="#C2C7CC"/>
+       <rect x="8" y="44" width="100" height="6" rx="3" fill="#DCE0E4"/>
+       <rect x="98" y="36" width="48" height="34" rx="9" fill="${tag.c}" stroke="rgba(0,0,0,0.28)" stroke-width="1"/>`;
+  return `<svg viewBox="0 0 160 100" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    ${body}
+    <text x="80" y="24" text-anchor="middle" font-size="19" font-weight="700" fill="#1F2933" font-family="JetBrains Mono, monospace">${len}</text>
+    <text x="80" y="90" text-anchor="middle" font-size="12" font-weight="700" fill="#5B6672">${tag.n}</text>
+  </svg>`;
+}
+
 function renderGrid(filter){
   const f = (filter||'').trim().toLowerCase();
   grid.innerHTML = '';
@@ -1439,10 +1473,33 @@ function renderGrid(filter){
       card.appendChild(badges);
     }
 
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    const tagInfo = COLOR_TAGS[item.code];
+    if(item.img){
+      const im = document.createElement('img');
+      im.src = item.img;
+      im.alt = item.name;
+      im.loading = 'lazy';
+      thumb.appendChild(im);
+      thumb.style.cursor = 'zoom-in';
+      thumb.addEventListener('click', () => openLightbox(item));
+    } else if(tagInfo){
+      thumb.classList.add('cap-thumb');
+      thumb.innerHTML = chipSVG(tagInfo, item.spec || '');
+      thumb.style.cursor = 'zoom-in';
+      thumb.title = '色分け早見表を開く';
+      thumb.addEventListener('click', () => openColorChart(tagInfo.k));
+    } else {
+      thumb.innerHTML = iconSVG();
+      thumb.style.cursor = 'default';
+    }
+    card.appendChild(thumb);
+
     const body = document.createElement('div');
     body.className = 'card-body';
     body.innerHTML = `
-      <div class="code mono">${item.code}</div>
+      <div class="code mono">${item.noCode ? '－' : item.code}</div>
       ${catLabel ? `<div class="cat-tag">${catLabel}</div>` : ''}
       <div class="name">${item.name}</div>
       <div class="spec">${item.spec||''}</div>
@@ -1773,7 +1830,7 @@ function resetForm(){
   orderRemarksValue = '';
   returnRemarksValue = '';
   specialMaterialsTextEl.value = '';
-  truckFractionEl.value = '1';
+  truckFractionEl.value = '';
   templateLoadStatusEl.textContent = '';
   templateLoadStatusEl.className = 'template-load-status';
   templateFileEl.value = '';
@@ -2023,6 +2080,9 @@ async function buildOrderZip(){
     if(deliveryTimeEl.value){
       const [hh, mm] = deliveryTimeEl.value.split(':').map(Number);
       xml = setCellInXml(xml, 'E5', {type:'n', value: (hh * 60 + mm) / 1440});
+    } else {
+      // 時間を指定していないときは、テンプレートに残っている時刻を消して空欄で出す
+      xml = setCellInXml(xml, 'E5', {type:'inlineStr', value: ''});
     }
     if(projectCodeEl.value.trim()){
       const num = Number(projectCodeEl.value.trim());
@@ -2042,7 +2102,7 @@ async function buildOrderZip(){
       const item = findItemByCode(code);
       const qty = cart[code];
       xml = setCellInXml(xml, 'A' + row, {type:'n', value: row - 11});
-      xml = setCellInXml(xml, 'B' + row, {type:'inlineStr', value: item.code});
+      xml = setCellInXml(xml, 'B' + row, {type:'inlineStr', value: item.noCode ? '－' : item.code});
       xml = setCellInXml(xml, 'C' + row, {type:'inlineStr', value: item.name});
       xml = setCellInXml(xml, 'D' + row, {type:'inlineStr', value: item.spec || ''});
       xml = setCellInXml(xml, 'F' + row, {type:'inlineStr', value: item.unit || ''});
@@ -2135,12 +2195,14 @@ async function buildOrderZip(){
   return true;
 }
 
-function orderFilename(ext){
+// 出力ファイル名：日付_通し番号_(返)_現場名.拡張子
+// 「返」は返納書を含むとき（返納書のみ／注文書＋返納書）だけ付く。返納書のみは通し番号なし
+function orderFilename(ext, hasReturn, withNumber = true){
   const deliveryDate = deliveryDateEl.value ? new Date(deliveryDateEl.value + 'T00:00:00') : new Date();
   const dateStr = `${deliveryDate.getFullYear()}${String(deliveryDate.getMonth()+1).padStart(2,'0')}${String(deliveryDate.getDate()).padStart(2,'0')}`;
-  const textStr = sanitizeFilePart(projectNameEl.value.trim());
   const numStr = sanitizeFilePart(slipNoEl.value.trim() || '000');
-  return `${dateStr}_${textStr}_${numStr}.${ext}`;
+  const textStr = sanitizeFilePart(projectNameEl.value.trim());
+  return [dateStr, withNumber ? numStr : '', hasReturn ? '返' : '', textStr].filter(Boolean).join('_') + '.' + ext;
 }
 
 async function buildWorkbookAndDownload(){
@@ -2152,7 +2214,7 @@ async function buildWorkbookAndDownload(){
     const ok = await buildOrderZip();
     if(!ok) return;
     const zip = sessionOrderZip;
-    const filename = orderFilename('xlsm');
+    const filename = orderFilename('xlsm', false);
 
     const blob = await zip.generateAsync({
       type: 'blob',
@@ -2160,7 +2222,15 @@ async function buildWorkbookAndDownload(){
       compression: 'DEFLATE',
       compressionOptions: {level: 6}
     });
-    await finalizeAndSave(blob, filename, 'application/vnd.ms-excel.sheet.macroEnabled.12');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Excelファイルを出力しました');
     clearOrderCartAfterOutput();
   } catch(err){
     console.error(err);
@@ -2314,6 +2384,11 @@ async function buildReturnSlipAndDownload(){
   if(!projectNameEl.value.trim()){
     alert('工事名称を入力してください。');
     projectNameEl.focus();
+    return;
+  }
+  if(!truckFractionEl.value){
+    alert('運送便（台数等）が設定されていません。\n返納書の運送便を選んでください。');
+    truckFractionEl.focus();
     return;
   }
 
@@ -2484,11 +2559,9 @@ async function buildReturnSlipAndDownload(){
       finalZip = retZip;
     }
 
-    const dateStr = `${deliveryDate.getFullYear()}${String(deliveryDate.getMonth()+1).padStart(2,'0')}${String(deliveryDate.getDate()).padStart(2,'0')}`;
-    const textStr = sanitizeFilePart(projectNameEl.value.trim());
-    const filename = combinedWithOrder
-      ? `${dateStr}_${textStr}_${sanitizeFilePart(slipNoEl.value.trim() || '000')}.xlsm`
-      : `${dateStr}_${textStr}_返納.xlsx`;
+    // 返納書を含む出力なので、ファイル名には必ず「返」が入る
+    // 返納書のみ（注文書と結合しない）場合は通し番号なし：日付_返_現場名.xlsx
+    const filename = orderFilename(combinedWithOrder ? 'xlsm' : 'xlsx', true, combinedWithOrder);
 
     const blob = await finalZip.generateAsync({
       type: 'blob',
@@ -2498,9 +2571,15 @@ async function buildReturnSlipAndDownload(){
       compression: 'DEFLATE',
       compressionOptions: {level: 6}
     });
-    await finalizeAndSave(blob, filename, combinedWithOrder
-      ? 'application/vnd.ms-excel.sheet.macroEnabled.12'
-      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('返納書を出力しました' + (combinedWithOrder ? '（注文書と同じファイルに追加）' : ''));
     resetForm();
   } catch(err){
     console.error(err);
@@ -2522,6 +2601,11 @@ async function buildCombinedAndDownload(){
   }
   if(Object.keys(returnCart).length === 0 && specialMaterialsTextEl.value.trim() === ''){
     alert('返納の品目、または特殊資材を入力してください。');
+    return;
+  }
+  if(!truckFractionEl.value){
+    alert('運送便（台数等）が設定されていません。\n返納書の運送便を選んでください。');
+    truckFractionEl.focus();
     return;
   }
 
