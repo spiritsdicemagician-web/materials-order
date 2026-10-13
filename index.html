@@ -951,15 +951,15 @@ const CATEGORIES = [
     {code:'A03555', name:'高周波インナーバイブレーター', spec:'マルチ　30経', unit:'本'},
     {code:'A03560', name:'ポリシュート', spec:'4m', unit:'台'},
     {code:'A03620', name:'コンクリートパイプ馬', spec:'', unit:'台'},
-    {code:'A03650', name:'水中ポンプ', spec:'2インチ　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。', note:'',unit:'台'},
-    {code:'A03660', name:'水中ポンプ', spec:'3インチ　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。', note:'',unit:'台'},
-    {code:'A03670', name:'水中ポンプ', spec:'4インチ　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。', note:'',unit:'台'},
+    {code:'A03650', name:'水中ポンプ', spec:'2インチ', note:'　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
+    {code:'A03660', name:'水中ポンプ', spec:'3インチ', note:'　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
+    {code:'A03670', name:'水中ポンプ', spec:'4インチ', note:'　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
     {code:'M03800', name:'サニーホース', spec:'2インチ', unit:'ｍ'},
     {code:'M03802', name:'サニーホース', spec:'2インチ　ジョイント', unit:'個'},
     {code:'M03810', name:'サニーホース', spec:'3インチ', unit:'ｍ'},
     {code:'M03812', name:'サニーホース', spec:'3インチ　ジョイント', unit:'個'},
     {code:'M03820', name:'サニーホース', spec:'4インチ', unit:'ｍ'},
-    {code:'A03680', name:'ベビースイッパー', spec:'使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。', note:'',unit:'台'},
+    {code:'A03680', name:'ベビースイッパー', spec:'', note:'使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
     {code:'A03690', name:'ベビースイッパー', spec:'ホース', unit:'ｍ'},
     {code:'M03702', name:'ベビースイッパー', spec:'ジョイント', unit:'個'},
     {code:'A06820', name:'送排風機', spec:'', unit:'台'},
@@ -1325,6 +1325,34 @@ function findItemByCode(code){
   return null;
 }
 
+/* ============ 色分けタグ（単管・足場板） ============
+   写真の代わりに色チップを表示します。色を直すときはここの値だけ変えればOK。
+   c=色コード / n=カードに出す色名 / k=絵の種類（pipe=単管、board=足場板） */
+const COLOR_TAGS = {
+  /* --- 単管 ４８．６（キャップ色） --- */
+  'A50770': {c:'#A9DCD0', n:'ミント',   k:'pipe'},  /* 6.0m */
+  'A50780': {c:'#EFC824', n:'黄',       k:'pipe'},  /* 5.5m */
+  'A50790': {c:'#EFEDE4', n:'白',       k:'pipe'},  /* 5.0m */
+  'A50800': {c:'#1D4FA5', n:'青',       k:'pipe'},  /* 4.5m */
+  'A50810': {c:'#A0603A', n:'茶色',     k:'pipe'},  /* 4.0m */
+  'A50820': {c:'#4E9B33', n:'緑',       k:'pipe'},  /* 3.5m */
+  'A50830': {c:'#E8701E', n:'オレンジ', k:'pipe'},  /* 3.0m */
+  'A50840': {c:'#4FB3DB', n:'水色',     k:'pipe'},  /* 2.5m */
+  'A50850': {c:'#1F1F1F', n:'黒',       k:'pipe'},  /* 2.0m */
+  'A50860': {c:'#F09A90', n:'ピンク',   k:'pipe'},  /* 1.5m */
+  'A50870': {c:'#A9DCD0', n:'ミント',   k:'pipe'},  /* 1.0m */
+  'A50880': {c:'#A9DCD0', n:'ミント',   k:'pipe'},  /* 0.5m */
+  /* --- 足場板（杉）（端部の色） --- */
+  'A51580': {c:'#EA7502', n:'オレンジ', k:'board'}, /* 4m */
+  'A51590': {c:'#EE6274', n:'ピンク',   k:'board'}, /* 3m */
+  'A51600': {c:'#E5C502', n:'黄',       k:'board'}, /* 2m */
+  'M51582': {c:'#1F1F1F', n:'黒（不良品）', k:'board'}, /* 4m 不良品 */
+  'M51592': {c:'#1F1F1F', n:'黒（不良品）', k:'board'}, /* 3m 不良品 */
+  'M51602': {c:'#1F1F1F', n:'黒（不良品）', k:'board'}, /* 2m 不良品 */
+};
+/* 色分け早見表の写真はこのバージョンでは使わない（色チップのみ表示）。 */
+const COLOR_CHARTS = {};
+
 /* item.img: 後から差し込む画像（Google Driveの共有URL、またはdata URL）。
    ページ読み込み時にDrive上の一覧を取得して品番にマッチする画像を反映する。 */
 CATEGORIES.forEach(cat => cat.items.forEach(it => it.img = null));
@@ -1429,6 +1457,7 @@ function openLightbox(item){
 }
 function openColorChart(kind){
   const ch = COLOR_CHARTS[kind];
+  if(!ch) return;
   lightboxEl.querySelector('.lightbox-inner').innerHTML =
     `<div class="chart-wrap">${ch.imgs.map(src => `<img src="${src}" alt="">`).join('')}</div>`
     + `<div class="lightbox-cap">${ch.title}</div>`;
@@ -1487,9 +1516,13 @@ function renderGrid(filter){
     } else if(tagInfo){
       thumb.classList.add('cap-thumb');
       thumb.innerHTML = chipSVG(tagInfo, item.spec || '');
-      thumb.style.cursor = 'zoom-in';
-      thumb.title = '色分け早見表を開く';
-      thumb.addEventListener('click', () => openColorChart(tagInfo.k));
+      if(COLOR_CHARTS[tagInfo.k]){
+        thumb.style.cursor = 'zoom-in';
+        thumb.title = '色分け早見表を開く';
+        thumb.addEventListener('click', () => openColorChart(tagInfo.k));
+      } else {
+        thumb.style.cursor = 'default';
+      }
     } else {
       thumb.innerHTML = iconSVG();
       thumb.style.cursor = 'default';
