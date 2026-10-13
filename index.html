@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>資材オーダーシステム</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#1F2933">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -75,6 +79,37 @@ body.cart-expanded{
 .topbar .search{
   margin-left:auto;
   flex:0 1 320px;
+}
+.drive-login-btn{
+  margin-left:auto;
+  background:rgba(255,255,255,0.12);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.35);
+  border-radius:8px;
+  padding:8px 14px;
+  font-size:12px;
+  font-family:"Noto Sans JP",sans-serif;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.drive-login-btn.logged-in{
+  background:var(--ok);
+  border-color:var(--ok);
+}
+.download-link-box{
+  display:none;
+  position:sticky;
+  top:56px;
+  z-index:29;
+  background:var(--ok-dim);
+  border-bottom:1px solid var(--ok);
+  padding:10px 20px;
+  text-align:center;
+}
+.manual-download-link{
+  color:var(--blueprint);
+  font-weight:700;
+  text-decoration:underline;
 }
 .topbar .search input{
   width:100%;
@@ -320,11 +355,6 @@ body.cart-expanded{
   color:var(--ink-soft);
   font-family:"JetBrains Mono",monospace;
 }
-.catalog-title .img-note{
-  font-family:"Noto Sans JP",sans-serif;
-  font-size:11.5px;
-  color:var(--ink-soft);
-}
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
@@ -361,10 +391,7 @@ body.cart-expanded{
 .card-badge.order{background:var(--blueprint);}
 .card-badge.return{background:var(--safety);}
 .thumb{
-  aspect-ratio:4/3;
-  min-height:0;
-  flex:none;
-  overflow:hidden;
+  aspect-ratio:1/1;
   background:
     linear-gradient(135deg, #F3F5F7 25%, transparent 25%) -8px 0/16px 16px,
     linear-gradient(225deg, #F3F5F7 25%, transparent 25%) -8px 0/16px 16px,
@@ -377,7 +404,7 @@ body.cart-expanded{
   justify-content:center;
   cursor:pointer;
 }
-.thumb img{width:100%;height:100%;min-width:0;min-height:0;object-fit:contain;background:#fff;}
+.thumb img{width:100%;height:100%;object-fit:cover;}
 .thumb .ph-icon{color:#B7C0C8;}
 .thumb .img-hint{
   position:absolute;
@@ -390,24 +417,6 @@ body.cart-expanded{
   border-radius:4px;
 }
 .thumb input[type=file]{display:none;}
-.lightbox{
-  position:fixed;
-  inset:0;
-  background:rgba(15,20,26,0.88);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:100;
-  padding:24px;
-  cursor:zoom-out;
-}
-.lightbox.show{display:flex;}
-.lightbox-inner{max-width:1200px;max-height:90vh;text-align:center;}
-.chart-wrap{display:flex;gap:16px;justify-content:center;align-items:flex-start;}
-.chart-wrap img{max-height:76vh;max-width:47%;width:auto;background:#fff;border-radius:8px;padding:6px;}
-.thumb.cap-thumb{background:#FAFBFC;border-bottom:1px solid var(--line);}
-.lightbox img{max-width:100%;max-height:78vh;border-radius:8px;background:#fff;}
-.lightbox-cap{color:#fff;font-size:13px;margin-top:10px;font-weight:700;}
 .card-body{padding:10px 12px 12px;flex:1;display:flex;flex-direction:column;gap:4px;}
 .code{
   font-size:10px;
@@ -663,10 +672,12 @@ body.cart-expanded{
 <body>
 
 <div class="topbar">
-  <div class="badge">V1.39</div>
+  <div class="badge">WEB</div>
   <h1>資材オーダー</h1>
   <div class="search"><input id="searchBox" type="text" placeholder="品番・品名で検索"></div>
+  <button id="driveLoginBtn" class="drive-login-btn" onclick="toggleDriveLogin()">👤 Googleでログイン</button>
 </div>
+<div id="downloadLinkBox" class="download-link-box"></div>
 
 <div class="slip">
   <div class="slip-head">
@@ -744,7 +755,7 @@ body.cart-expanded{
   </div>
 </div>
 
-<div class="hint-banner">品目カードをタップすると、押した回数分だけ数量がカートに積み上がります（同じ品目は自動で数量が合算されます）。写真が登録されている品目は、写真をタップすると拡大表示されます。単管と足場板は色チップをタップすると長さ別の色分け表が開きます。下の切り替えで「注文」「返納」どちらに積むか選べます。</div>
+<div class="hint-banner">品目カードをタップすると、押した回数分だけ数量がカートに積み上がります（同じ品目は自動で数量が合算されます）。写真アイコンをタップすると、後で商品画像を設定できます。下の切り替えで「注文」「返納」どちらに積むか選べます。</div>
 
 <div class="mode-toggle">
   <button type="button" class="mode-btn active" id="modeOrder" data-mode="order">🛒 注文モード</button>
@@ -771,7 +782,7 @@ body.cart-expanded{
 </div>
 
 <div class="catalog-wrap">
-  <div class="catalog-title"><h2>品目一覧</h2><span id="itemCount"></span><span class="img-note">※写真はイメージです</span></div>
+  <div class="catalog-title"><h2>品目一覧</h2><span id="itemCount"></span></div>
   <div class="grid" id="grid"></div>
 </div>
 
@@ -788,7 +799,6 @@ body.cart-expanded{
   <div class="return-options" id="returnOptions">
     <label>運送便（台数等）</label>
     <select id="truckFraction">
-      <option value="">選択してください</option>
       <option value="1">3ｔﾕﾆｯｸ 1台</option>
       <option value="1/2">3ｔﾕﾆｯｸ 1/2台</option>
       <option value="1/3">3ｔﾕﾆｯｸ 1/3台</option>
@@ -806,6 +816,165 @@ body.cart-expanded{
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* ============ オフライン対応（Service Worker） ============
+   一度オンラインで開いておけば、以後は電波なしでも起動・資材追加ができる。 */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('オフラインキャッシュの登録に失敗しました', err));
+  });
+}
+
+/* ============ Googleドライブ連携 ============
+   出力ボタンを押した/ログインボタンを押した時にだけGoogleのログインスクリプトを読み込む
+   （ページを開く時点ではオフラインでも問題ないようにするため）。
+   CAR MANAGERアプリと同じGoogle CloudクライアントIDを使う想定。 */
+const DRIVE_CLIENT_ID = '1074075293181-lg9bbbgk3h3shb1fdnjspt860i276957.apps.googleusercontent.com';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FOLDER_NAME = '資材伝票';
+
+let driveAccessToken = null;
+let driveTokenClient = null;
+let driveFolderIdCache = null;
+
+function ensureGisLoaded(){
+  return new Promise((resolve, reject) => {
+    if(window.google && google.accounts && google.accounts.oauth2){ resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('ログイン機能の読み込みに失敗しました（電波を確認してください）'));
+    document.head.appendChild(script);
+  });
+}
+
+function driveLogin(){
+  return ensureGisLoaded().then(() => new Promise((resolve, reject) => {
+    driveTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: DRIVE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: (resp) => {
+        if(resp.error){ reject(resp); return; }
+        driveAccessToken = resp.access_token;
+        updateLoginUI(true);
+        resolve(resp.access_token);
+      }
+    });
+    driveTokenClient.requestAccessToken({ prompt: '' });
+  }));
+}
+
+function driveLogout(){
+  if(driveAccessToken && window.google && google.accounts){
+    google.accounts.oauth2.revoke(driveAccessToken, () => {});
+  }
+  driveAccessToken = null;
+  driveFolderIdCache = null;
+  updateLoginUI(false);
+}
+
+function updateLoginUI(loggedIn){
+  const btn = document.getElementById('driveLoginBtn');
+  if(!btn) return;
+  btn.textContent = loggedIn ? '✅ ログイン中（マイドライブに保存）' : '👤 Googleでログイン';
+  btn.classList.toggle('logged-in', loggedIn);
+}
+
+function toggleDriveLogin(){
+  if(driveAccessToken){
+    if(confirm('ログアウトしますか？（以後の出力はダウンロード保存になります）')) driveLogout();
+    return;
+  }
+  driveLogin().catch(err => {
+    console.error(err);
+    alert('ログインに失敗しました。電波の良い場所で再度お試しください。詳細：' + (err && err.message ? err.message : err));
+  });
+}
+
+async function getOrCreateDriveFolder(){
+  if(driveFolderIdCache) return driveFolderIdCache;
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false and 'root' in parents`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: 'Bearer ' + driveAccessToken }
+  });
+  const data = await res.json();
+  if(data.files && data.files.length > 0){
+    driveFolderIdCache = data.files[0].id;
+    return driveFolderIdCache;
+  }
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + driveAccessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  const created = await createRes.json();
+  driveFolderIdCache = created.id;
+  return driveFolderIdCache;
+}
+
+async function uploadToDrive(blob, filename, mimeType){
+  const folderId = await getOrCreateDriveFolder();
+  const metadata = { name: filename, parents: [folderId] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', blob);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + driveAccessToken },
+    body: form
+  });
+  if(!res.ok) throw new Error('Driveへのアップロードに失敗しました（status ' + res.status + '）');
+  return res.json();
+}
+
+/* ============ ローカル保存（未ログイン時のフォールバック） ============
+   iOS Safariはblob+自動クリックのダウンロードに対応していないため、
+   Web Share APIを優先し、非対応の場合は長押し保存用のリンクを表示する。 */
+async function saveLocally(blob, filename, mimeType){
+  try{
+    const file = new File([blob], filename, { type: mimeType });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: filename });
+      return;
+    }
+  }catch(err){
+    if(err && err.name === 'AbortError') return; // ユーザーが共有をキャンセルした場合は何もしない
+    console.warn('共有に失敗したためリンク方式に切り替えます', err);
+  }
+  showDownloadLink(blob, filename);
+}
+
+function showDownloadLink(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const box = document.getElementById('downloadLinkBox');
+  box.innerHTML = '';
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.textContent = '📥 ' + filename + '（保存されない場合はこのリンクを長押しして保存）';
+  a.className = 'manual-download-link';
+  box.appendChild(a);
+  box.style.display = 'block';
+  a.click();
+}
+
+/* ============ 出力の共通エントリーポイント ============
+   ログイン済みならDriveのマイドライブへ、未ログインならローカル（ダウンロード）へ保存する。 */
+async function finalizeAndSave(blob, filename, mimeType){
+  if(driveAccessToken){
+    try{
+      await uploadToDrive(blob, filename, mimeType);
+      showToast('Googleドライブの「' + DRIVE_FOLDER_NAME + '」フォルダに保存しました');
+      return;
+    }catch(err){
+      console.error(err);
+      alert('Driveへの保存に失敗したため、ダウンロード保存に切り替えます。詳細：' + err.message);
+    }
+  }
+  await saveLocally(blob, filename, mimeType);
+  if(!driveAccessToken) showToast(filename + ' を保存しました（Googleにログインするとマイドライブにも保存できます）');
+}
+</script>
 <script>
 /* ============ カテゴリ別 品目データ ============ */
 const CATEGORIES = [
@@ -835,19 +1004,19 @@ const CATEGORIES = [
     {code:'M60573', name:'キー札', spec:'青', unit:'枚'},
     {code:'M60574', name:'キー札', spec:'黄', unit:'枚'},
     {code:'M60575', name:'キー札', spec:'緑', unit:'枚'},
-    {code:'K00230', name:'安全靴', spec:'23.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00235', name:'安全靴', spec:'23.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00240', name:'安全靴', spec:'24.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00245', name:'安全靴', spec:'24.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00250', name:'安全靴', spec:'25.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00255', name:'安全靴', spec:'25.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00260', name:'安全靴', spec:'26.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00265', name:'安全靴', spec:'26.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00270', name:'安全靴', spec:'27.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00275', name:'安全靴', spec:'27.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00280', name:'安全靴', spec:'28.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00290', name:'安全靴', spec:'29.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
-    {code:'K00300', name:'安全靴', spec:'30.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'23.0', note:'備考欄に名前とサイズ記入', unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'23.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'24.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'24.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'25.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'25.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'26.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'26.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'27.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'27.5', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'28.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'29.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
+    {code:'M00000', name:'安全靴', spec:'30.0', note:'備考欄に名前とサイズ記入',unit:'枚'},
     {code:'M00000', name:'作業服上　夏　', spec:'Ⅿ', note:'備考欄に名前とサイズ記入',unit:'枚'},
     {code:'M00000', name:'作業服上　夏　', spec:'Ｌ', note:'備考欄に名前とサイズ記入',unit:'枚'},
     {code:'M00000', name:'作業服上　夏　', spec:'２Ｌ', note:'備考欄に名前とサイズ記入',unit:'枚'},
@@ -899,7 +1068,7 @@ const CATEGORIES = [
     {code:'A01070', name:'ロッカー（１人用）', spec:'W460H1790D515', note:'寸法違いあります。', unit:'台'},
     {code:'A01100', name:'書庫', spec:'H900×W900', unit:'台'},
     {code:'A01101', name:'書庫（ガラス戸）', spec:'H900×W900', unit:'台'},
-    {code:'A01120', name:'開放棚', spec:'W900-D450-H1800', unit:'台'},
+    {code:'A01120', name:'開放棚', spec:'D450-H1800', unit:'台'},
     {code:'A01180', name:'洗面流し台', spec:'', unit:'台'},
     {code:'A01280', name:'冷蔵庫', spec:'', unit:'台'},
     {code:'A01295', name:'製氷機', spec:'', unit:'台'},
@@ -944,16 +1113,16 @@ const CATEGORIES = [
     {code:'A03501', name:'バイブレーター', spec:'2.0m', unit:'台'},
     {code:'A03503', name:'壁打バイブレーター', spec:'', unit:'台'},
     {code:'A03510', name:'高周波バイブレーター　本体', spec:'220V', unit:'台'},
-    {code:'A03520', name:'高周波バイブレーター　本体', spec:'100V　本体にマルチ３本は禁止、本体に刺していいのは２本までです。３本目を使う場合は中間コードと分電盤を接続しましょう。', note:'',unit:'台'},
+    {code:'A03520', name:'高周波バイブレーター　本体', spec:'100V', note:'本体にマルチ３本は禁止、本体に刺していいのは２本までです。３本目を使う場合は中間コードと分電盤を接続しましょう。',unit:'台'},
     {code:'A03530', name:'高周波バイブレーター', spec:'分電盤', unit:'台'},
     {code:'A03540', name:'高周波バイブレーター', spec:'中間コード', unit:'本'},
     {code:'A03550', name:'高周波インナーバイブレーター', spec:'マルチ　40経', unit:'本'},
     {code:'A03555', name:'高周波インナーバイブレーター', spec:'マルチ　30経', unit:'本'},
     {code:'A03560', name:'ポリシュート', spec:'4m', unit:'台'},
     {code:'A03620', name:'コンクリートパイプ馬', spec:'', unit:'台'},
-    {code:'A03650', name:'水中ポンプ', spec:'2インチ', note:'　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
-    {code:'A03660', name:'水中ポンプ', spec:'3インチ', note:'　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
-    {code:'A03670', name:'水中ポンプ', spec:'4インチ', note:'　使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
+    {code:'A03650', name:'水中ポンプ', spec:'2インチ', note:'使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
+    {code:'A03660', name:'水中ポンプ', spec:'3インチ', note:'使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
+    {code:'A03670', name:'水中ポンプ', spec:'4インチ', note:'使い終わったらきれいな水を吸わせて、中を洗浄しましょう。水が無い状態で空回ししていると壊れます。',unit:'台'},
     {code:'M03800', name:'サニーホース', spec:'2インチ', unit:'ｍ'},
     {code:'M03802', name:'サニーホース', spec:'2インチ　ジョイント', unit:'個'},
     {code:'M03810', name:'サニーホース', spec:'3インチ', unit:'ｍ'},
@@ -977,9 +1146,9 @@ const CATEGORIES = [
     {code:'A03862', name:'鋼製レーキ', spec:'', unit:'本'},
     {code:'A03930', name:'鉄筋カッター', spec:'', unit:'丁'},
     {code:'A03935', name:'メッシュロード', spec:'', unit:'枚'},
-    {code:'A04050', name:'伸縮ハシゴ', spec:'6.4m～7.2m', note:'',unit:'台'},
-    {code:'A04060', name:'シングルハシゴ', spec:'3m　いっぱい凹むと滅失なので注意して下さい。', note:'3ｍ',unit:'台'},
-    {code:'A04060', name:'シングルハシゴ', spec:'4m　いっぱい凹むと滅失なので注意して下さい。', note:'4ｍ',unit:'台'},
+    {code:'A04050', name:'伸縮ハシゴ', spec:'6.4m～7.2m', note:'いっぱい凹むと滅失なので注意して下さい。',unit:'台'},
+    {code:'A04060', name:'シングルハシゴ', spec:'3m', note:'いっぱい凹むと滅失なので注意して下さい。',unit:'台'},
+    {code:'A04060', name:'シングルハシゴ', spec:'4m', note:'いっぱい凹むと滅失なので注意して下さい。',unit:'台'},
     {code:'A05905', name:'方向指示板', spec:'', unit:'枚'},
     {code:'A05960', name:'消火器', spec:'10型', unit:'本'},
     {code:'A06540', name:'カラーコーン', spec:'H700', unit:'本'},
@@ -1188,7 +1357,7 @@ const CATEGORIES = [
     {code:'A51110', name:'ＮＫブラケット　兼用', spec:'5～7.5', unit:'個'},
     {code:'A51120', name:'ＮＫブラケット　兼用', spec:'7.5～10', unit:'個'},
     {code:'A51130', name:'ＮＫ先端カプラ', spec:'3-5', unit:'個'},
-    {code:'A51140', name:'ＮＫ先端カプラ', spec:'5-10', unit:'個', note:'ボルトとナットは現場手配'},
+    {code:'A51140', name:'ＮＫ先端カプラ', spec:'5-10', unit:'個'},
     {code:'A51225', name:'開口スライドバー', spec:'1525', unit:'本'},
     {code:'A51380', name:'タンパックル', spec:'250～300', unit:'本'},
     {code:'A51416', name:'アングルブラケット', spec:'400～600', unit:'本'},
@@ -1325,34 +1494,6 @@ function findItemByCode(code){
   return null;
 }
 
-/* ============ 色分けタグ（単管・足場板） ============
-   写真の代わりに色チップを表示します。色を直すときはここの値だけ変えればOK。
-   c=色コード / n=カードに出す色名 / k=絵の種類（pipe=単管、board=足場板） */
-const COLOR_TAGS = {
-  /* --- 単管 ４８．６（キャップ色） --- */
-  'A50770': {c:'#A9DCD0', n:'ミント',   k:'pipe'},  /* 6.0m */
-  'A50780': {c:'#EFC824', n:'黄',       k:'pipe'},  /* 5.5m */
-  'A50790': {c:'#EFEDE4', n:'白',       k:'pipe'},  /* 5.0m */
-  'A50800': {c:'#1D4FA5', n:'青',       k:'pipe'},  /* 4.5m */
-  'A50810': {c:'#A0603A', n:'茶色',     k:'pipe'},  /* 4.0m */
-  'A50820': {c:'#4E9B33', n:'緑',       k:'pipe'},  /* 3.5m */
-  'A50830': {c:'#E8701E', n:'オレンジ', k:'pipe'},  /* 3.0m */
-  'A50840': {c:'#4FB3DB', n:'水色',     k:'pipe'},  /* 2.5m */
-  'A50850': {c:'#1F1F1F', n:'黒',       k:'pipe'},  /* 2.0m */
-  'A50860': {c:'#F09A90', n:'ピンク',   k:'pipe'},  /* 1.5m */
-  'A50870': {c:'#A9DCD0', n:'ミント',   k:'pipe'},  /* 1.0m */
-  'A50880': {c:'#A9DCD0', n:'ミント',   k:'pipe'},  /* 0.5m */
-  /* --- 足場板（杉）（端部の色） --- */
-  'A51580': {c:'#EA7502', n:'オレンジ', k:'board'}, /* 4m */
-  'A51590': {c:'#EE6274', n:'ピンク',   k:'board'}, /* 3m */
-  'A51600': {c:'#E5C502', n:'黄',       k:'board'}, /* 2m */
-  'M51582': {c:'#1F1F1F', n:'黒（不良品）', k:'board'}, /* 4m 不良品 */
-  'M51592': {c:'#1F1F1F', n:'黒（不良品）', k:'board'}, /* 3m 不良品 */
-  'M51602': {c:'#1F1F1F', n:'黒（不良品）', k:'board'}, /* 2m 不良品 */
-};
-/* 色分け早見表の写真はこのバージョンでは使わない（色チップのみ表示）。 */
-const COLOR_CHARTS = {};
-
 /* item.img: 後から差し込む画像（Google Driveの共有URL、またはdata URL）。
    ページ読み込み時にDrive上の一覧を取得して品番にマッチする画像を反映する。 */
 CATEGORIES.forEach(cat => cat.items.forEach(it => it.img = null));
@@ -1443,41 +1584,6 @@ function allItemsFlat(){
   return out;
 }
 
-/* ---- 写真の拡大表示 ---- */
-const lightboxEl = document.createElement('div');
-lightboxEl.className = 'lightbox';
-lightboxEl.innerHTML = `<div class="lightbox-inner"></div>`;
-document.body.appendChild(lightboxEl);
-lightboxEl.addEventListener('click', () => lightboxEl.classList.remove('show'));
-document.addEventListener('keydown', e => { if(e.key === 'Escape') lightboxEl.classList.remove('show'); });
-function openLightbox(item){
-  lightboxEl.querySelector('.lightbox-inner').innerHTML =
-    `<img src="${item.img}" alt=""><div class="lightbox-cap">${item.noCode ? '' : item.code + '　'}${item.name}${item.spec ? '　'+item.spec : ''}</div>`;
-  lightboxEl.classList.add('show');
-}
-function openColorChart(kind){
-  const ch = COLOR_CHARTS[kind];
-  if(!ch) return;
-  lightboxEl.querySelector('.lightbox-inner').innerHTML =
-    `<div class="chart-wrap">${ch.imgs.map(src => `<img src="${src}" alt="">`).join('')}</div>`
-    + `<div class="lightbox-cap">${ch.title}</div>`;
-  lightboxEl.classList.add('show');
-}
-function chipSVG(tag, len){
-  const body = tag.k === 'board'
-    ? `<rect x="8" y="38" width="98" height="30" fill="#D7C4A3" stroke="#BFA87F" stroke-width="1"/>
-       <rect x="8" y="38" width="98" height="7" fill="#E3D3B8"/>
-       <rect x="102" y="34" width="42" height="38" rx="2" fill="${tag.c}" stroke="rgba(0,0,0,0.28)" stroke-width="1"/>`
-    : `<rect x="8" y="44" width="100" height="18" rx="3" fill="#C2C7CC"/>
-       <rect x="8" y="44" width="100" height="6" rx="3" fill="#DCE0E4"/>
-       <rect x="98" y="36" width="48" height="34" rx="9" fill="${tag.c}" stroke="rgba(0,0,0,0.28)" stroke-width="1"/>`;
-  return `<svg viewBox="0 0 160 100" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-    ${body}
-    <text x="80" y="24" text-anchor="middle" font-size="19" font-weight="700" fill="#1F2933" font-family="JetBrains Mono, monospace">${len}</text>
-    <text x="80" y="90" text-anchor="middle" font-size="12" font-weight="700" fill="#5B6672">${tag.n}</text>
-  </svg>`;
-}
-
 function renderGrid(filter){
   const f = (filter||'').trim().toLowerCase();
   grid.innerHTML = '';
@@ -1502,37 +1608,10 @@ function renderGrid(filter){
       card.appendChild(badges);
     }
 
-    const thumb = document.createElement('div');
-    thumb.className = 'thumb';
-    const tagInfo = COLOR_TAGS[item.code];
-    if(item.img){
-      const im = document.createElement('img');
-      im.src = item.img;
-      im.alt = item.name;
-      im.loading = 'lazy';
-      thumb.appendChild(im);
-      thumb.style.cursor = 'zoom-in';
-      thumb.addEventListener('click', () => openLightbox(item));
-    } else if(tagInfo){
-      thumb.classList.add('cap-thumb');
-      thumb.innerHTML = chipSVG(tagInfo, item.spec || '');
-      if(COLOR_CHARTS[tagInfo.k]){
-        thumb.style.cursor = 'zoom-in';
-        thumb.title = '色分け早見表を開く';
-        thumb.addEventListener('click', () => openColorChart(tagInfo.k));
-      } else {
-        thumb.style.cursor = 'default';
-      }
-    } else {
-      thumb.innerHTML = iconSVG();
-      thumb.style.cursor = 'default';
-    }
-    card.appendChild(thumb);
-
     const body = document.createElement('div');
     body.className = 'card-body';
     body.innerHTML = `
-      <div class="code mono">${item.noCode ? '－' : item.code}</div>
+      <div class="code mono">${item.code}</div>
       ${catLabel ? `<div class="cat-tag">${catLabel}</div>` : ''}
       <div class="name">${item.name}</div>
       <div class="spec">${item.spec||''}</div>
@@ -1863,7 +1942,7 @@ function resetForm(){
   orderRemarksValue = '';
   returnRemarksValue = '';
   specialMaterialsTextEl.value = '';
-  truckFractionEl.value = '';
+  truckFractionEl.value = '1';
   templateLoadStatusEl.textContent = '';
   templateLoadStatusEl.className = 'template-load-status';
   templateFileEl.value = '';
@@ -2113,9 +2192,6 @@ async function buildOrderZip(){
     if(deliveryTimeEl.value){
       const [hh, mm] = deliveryTimeEl.value.split(':').map(Number);
       xml = setCellInXml(xml, 'E5', {type:'n', value: (hh * 60 + mm) / 1440});
-    } else {
-      // 時間を指定していないときは、テンプレートに残っている時刻を消して空欄で出す
-      xml = setCellInXml(xml, 'E5', {type:'inlineStr', value: ''});
     }
     if(projectCodeEl.value.trim()){
       const num = Number(projectCodeEl.value.trim());
@@ -2135,7 +2211,7 @@ async function buildOrderZip(){
       const item = findItemByCode(code);
       const qty = cart[code];
       xml = setCellInXml(xml, 'A' + row, {type:'n', value: row - 11});
-      xml = setCellInXml(xml, 'B' + row, {type:'inlineStr', value: item.noCode ? '－' : item.code});
+      xml = setCellInXml(xml, 'B' + row, {type:'inlineStr', value: item.code});
       xml = setCellInXml(xml, 'C' + row, {type:'inlineStr', value: item.name});
       xml = setCellInXml(xml, 'D' + row, {type:'inlineStr', value: item.spec || ''});
       xml = setCellInXml(xml, 'F' + row, {type:'inlineStr', value: item.unit || ''});
@@ -2228,14 +2304,12 @@ async function buildOrderZip(){
   return true;
 }
 
-// 出力ファイル名：日付_通し番号_(返)_現場名.拡張子
-// 「返」は返納書を含むとき（返納書のみ／注文書＋返納書）だけ付く。返納書のみは通し番号なし
-function orderFilename(ext, hasReturn, withNumber = true){
+function orderFilename(ext){
   const deliveryDate = deliveryDateEl.value ? new Date(deliveryDateEl.value + 'T00:00:00') : new Date();
   const dateStr = `${deliveryDate.getFullYear()}${String(deliveryDate.getMonth()+1).padStart(2,'0')}${String(deliveryDate.getDate()).padStart(2,'0')}`;
-  const numStr = sanitizeFilePart(slipNoEl.value.trim() || '000');
   const textStr = sanitizeFilePart(projectNameEl.value.trim());
-  return [dateStr, withNumber ? numStr : '', hasReturn ? '返' : '', textStr].filter(Boolean).join('_') + '.' + ext;
+  const numStr = sanitizeFilePart(slipNoEl.value.trim() || '000');
+  return `${dateStr}_${textStr}_${numStr}.${ext}`;
 }
 
 async function buildWorkbookAndDownload(){
@@ -2247,7 +2321,7 @@ async function buildWorkbookAndDownload(){
     const ok = await buildOrderZip();
     if(!ok) return;
     const zip = sessionOrderZip;
-    const filename = orderFilename('xlsm', false);
+    const filename = orderFilename('xlsm');
 
     const blob = await zip.generateAsync({
       type: 'blob',
@@ -2255,15 +2329,7 @@ async function buildWorkbookAndDownload(){
       compression: 'DEFLATE',
       compressionOptions: {level: 6}
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Excelファイルを出力しました');
+    await finalizeAndSave(blob, filename, 'application/vnd.ms-excel.sheet.macroEnabled.12');
     clearOrderCartAfterOutput();
   } catch(err){
     console.error(err);
@@ -2417,11 +2483,6 @@ async function buildReturnSlipAndDownload(){
   if(!projectNameEl.value.trim()){
     alert('工事名称を入力してください。');
     projectNameEl.focus();
-    return;
-  }
-  if(!truckFractionEl.value){
-    alert('運送便（台数等）が設定されていません。\n返納書の運送便を選んでください。');
-    truckFractionEl.focus();
     return;
   }
 
@@ -2592,9 +2653,11 @@ async function buildReturnSlipAndDownload(){
       finalZip = retZip;
     }
 
-    // 返納書を含む出力なので、ファイル名には必ず「返」が入る
-    // 返納書のみ（注文書と結合しない）場合は通し番号なし：日付_返_現場名.xlsx
-    const filename = orderFilename(combinedWithOrder ? 'xlsm' : 'xlsx', true, combinedWithOrder);
+    const dateStr = `${deliveryDate.getFullYear()}${String(deliveryDate.getMonth()+1).padStart(2,'0')}${String(deliveryDate.getDate()).padStart(2,'0')}`;
+    const textStr = sanitizeFilePart(projectNameEl.value.trim());
+    const filename = combinedWithOrder
+      ? `${dateStr}_${textStr}_${sanitizeFilePart(slipNoEl.value.trim() || '000')}.xlsm`
+      : `${dateStr}_${textStr}_返納.xlsx`;
 
     const blob = await finalZip.generateAsync({
       type: 'blob',
@@ -2604,15 +2667,9 @@ async function buildReturnSlipAndDownload(){
       compression: 'DEFLATE',
       compressionOptions: {level: 6}
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('返納書を出力しました' + (combinedWithOrder ? '（注文書と同じファイルに追加）' : ''));
+    await finalizeAndSave(blob, filename, combinedWithOrder
+      ? 'application/vnd.ms-excel.sheet.macroEnabled.12'
+      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     resetForm();
   } catch(err){
     console.error(err);
@@ -2634,11 +2691,6 @@ async function buildCombinedAndDownload(){
   }
   if(Object.keys(returnCart).length === 0 && specialMaterialsTextEl.value.trim() === ''){
     alert('返納の品目、または特殊資材を入力してください。');
-    return;
-  }
-  if(!truckFractionEl.value){
-    alert('運送便（台数等）が設定されていません。\n返納書の運送便を選んでください。');
-    truckFractionEl.focus();
     return;
   }
 
